@@ -5,7 +5,10 @@
 #libraries
 library(tidyverse)
 library(emmeans)
+library(lmerTest)
 library(codyn)
+library(lubridate)
+library(viridisLite)
 
 # bring in veg data (downloaded October 2021)
 veg_data_original<- read_csv("data/saddptqd.hh.data.csv")
@@ -64,7 +67,7 @@ veg_abundance_known_species %>%
 mumti_change <- multivariate_change(df=subset_veg_abundance_known_species, time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
 mumti_change 
 
-plot1<- mumti_change %>% 
+plot_temporal_turnover_all<- mumti_change %>% 
 ggplot(aes(year2, composition_change)) +
 geom_point()+
 geom_line()+
@@ -73,9 +76,9 @@ xlab("Year")+
 ylab("Compositional Change Relative to 1989")+
 ggtitle("Saddle Veg Temporal Change")+
 ylim(0,.15)
-plot1
+plot_temporal_turnover_all
 
-plot2<- mumti_change %>% 
+plot_spatial_turnover_all<- mumti_change %>% 
 ggplot(aes(year2, dispersion_change)) +
 geom_point()+
 geom_line()+
@@ -85,9 +88,152 @@ ylab("Dispersion Change Relative to 1989")+
 #ylim(-.025, 0.01)+
 geom_hline(yintercept = 0)+
 ggtitle("Saddle Veg Spatial Change")
-plot2
+plot_spatial_turnover_all
+
+#Notes: 
+# - do we need to remove Snow Fence plots?
+
+#Next steps - divide by different snowiness quantiles and re-do above analyses - do we see certain parts of the landscape changing more?
+
+# bring in snow data
+# bring in snow daily data
+snow <- read_csv("data/saddsnow.dw.data.csv")
+snow$date <-ymd(snow$date)
+snow$year <- year(snow$date) 
+snow$month <- month(snow$date)
+# first year of surveys 
+min(snow$year) # 1992
+
+# focus on May depth
+snow_May_plot_means <-
+snow %>% 
+  filter(month == 5) %>% 
+  group_by(year, point_ID) %>% 
+  summarise(snow_depth = round(mean(mean_depth, na.rm = T),digits = 0))
+
+# look at snow depth through time - no directional patterns - supports taking a average over years; there is some evidence of snowier plots becomes less snowy through time... more evident in May than June
+snow_May_plot_means %>% 
+ggplot(aes(year, snow_depth, group = point_ID)) +
+  geom_point()+
+  geom_line()+
+  theme_classic()+
+  geom_smooth(method = "lm", se=F)
+
+# estimate the snowiness of each plot
+snowiness_by_plot <- 
+  snow_June_plot_means %>% 
+    group_by(point_ID) %>% 
+  summarise(snow_depth = round(mean(snow_depth, na.rm = T),digits = 0))
+snowiness_by_plot
+
+# put plots in to quantiles by snow  1 = low,, 3 = high snow
+snowiness_by_plot <-
+snowiness_by_plot  %>% 
+mutate(snow_rank = ntile(snow_depth, 3))
+colnames(snowiness_by_plot)[1] <- "plot" 
+snowiness_by_plot
+
+# combine veg and snow data --> veg_snow
+veg_snow <- left_join(subset_veg_abundance_known_species, snowiness_by_plot)
+veg_snow
+
+# analysis of turnover from reference time persion 
+mumti_change_1 <- 
+veg_snow %>% 
+  filter(snow_rank == 1) %>% 
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+mumti_change_1$Snow_Persistence <- "Low Snow"
+mumti_change_1$rank <- 1
+mumti_change_1 
+
+mumti_change_2 <- 
+veg_snow %>% 
+  filter(snow_rank == 2) %>% 
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+mumti_change_2$Snow_Persistence <- "Average Snow"
+mumti_change_2$rank <- 2
+mumti_change_2 
+
+mumti_change_3 <- 
+veg_snow %>% 
+  filter(snow_rank == 3) %>% 
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+mumti_change_3$Snow_Persistence <- "High Snow"
+mumti_change_3$rank <- 3
+mumti_change_3 
+
+turnover <- rbind(mumti_change_1, mumti_change_2, mumti_change_3)
+
+turnover %>% 
+  ggplot(aes(year2, composition_change, color = Snow_Persistence)) +
+  geom_point(size = 3)+
+  geom_line(lwd = 1.1)+
+  theme_classic()+
+  xlab("Year")+
+  ylab("Compositional Change Relative to 1989")+
+      scale_colour_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))
+
+turnover %>% 
+  ggplot(aes(year2, dispersion_change, color = Snow_Persistence)) +
+  geom_point(size = 3)+
+  geom_line(lwd = 1.1)+
+  theme_classic()+
+  geom_hline(yintercept = 0)+
+  xlab("Year")+
+  ylab("Dispersion Relative to 1989")+
+  scale_colour_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))
+# the extremes are changing the most - we know from the thermophilization analysis that these extremes are changing in different ways
+
+# correlate changing composition to GDD, look for interactions with snow rank
+# bring in temperature data
+#bring in temperature data
+temp <- read_csv("data/sdl_temp_1981-2020_draft.csv")
+temp
+
+# calculate GDD
+GDD <- 
+  temp %>% 
+  filter(yr >= 1989, metric == 'mean') %>% 
+  filter(adjusted_airtemp > 0) %>% 
+  group_by(yr) %>% 
+  summarise(GDD = round(sum(adjusted_airtemp),0))
+colnames(GDD)[1] <- "year2"
+
+# combine turnover and GDD
+turnover_temp <- left_join(turnover, GDD)
+turnover_temp 
+fit1 <- lm(composition_change ~ GDD*Snow_Persistence, data = turnover_temp)
+summary(fit1)
+emtrends(fit1 , specs = "Snow_Persistence", var = "GDD")
+emmeans(fit1, pairwise ~ Snow_Persistence)
+# low snow and high snow are similar, but average snow is different
+
+turnover_temp %>% 
+  ggplot(aes(GDD, composition_change, color = Snow_Persistence, fill = Snow_Persistence))+
+  geom_point(size = 2)+
+  theme_classic()+
+    xlab("Growing Degree-Days")+
+  ylab("Compositional Change Relative to 1989")+
+      scale_colour_viridis_d(option = "turbo")+
+  scale_fill_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))+
+  geom_smooth(method = "lm", se = T)
 
 
+# Considering time series analyses...
+fit2 <- lm(composition_change ~ year2*Snow_Persistence + lag(year2,1), data = turnover_temp)
+summary(fit2)
+anova(fit2)
+emtrends(fit2 , specs = "Snow_Persistence", var = "year2")
 
+Turnover_temp <-
+turnover_temp %>% 
+  arrange(year2)
+
+
+fit3 <- lm(composition_change ~ year2, data = turnover_temp) 
+acf(resid(fit3)) # very autocorrelated residuals 
 
 
