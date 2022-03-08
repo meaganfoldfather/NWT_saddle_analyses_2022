@@ -42,7 +42,7 @@ veg_abundance
  
 # remove unknown species and non-species --> "veg_abundance_known_species"
 non_plant <- c("2RF", "2LICHN", "2X","2LTR","2BARE", "2HOLE", "2MOSS", "2SCATE")
-unknown_species <- c("2FORB","2MOSS","2GRAM", "2UNKSC", "POA","2UNK", "CAREX", "2COMP") 
+unknown_species <- c("2FORB","2MOSS","2GRAM", "2UNKSC", "POA","2UNK", "CAREX", "2COMP", "STELL","CACA12", "CAREX4", "CAREX2", "CAREX1", "CAREX6", "CAREX7") 
 
 veg_abundance_known_species <-
   veg_abundance %>% 
@@ -59,12 +59,12 @@ veg_abundance_known_species %>%
   filter(totals > 0)
 
 # remove 1989
-#subset_veg_abundance_known_species <- 
-#subset_veg_abundance_known_species %>% 
-#  filter(year != 1989)
+subset_veg_abundance_known_species <- 
+subset_veg_abundance_known_species %>% 
+  filter(year != 1989)
 
 # analysis of turnover from reference time persion 
-mumti_change <- multivariate_change(df=subset_veg_abundance_known_species, time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+mumti_change <- multivariate_change(df=subset_veg_abundance_known_species, time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change 
 
 plot_temporal_turnover_all<- mumti_change %>% 
@@ -73,7 +73,7 @@ geom_point()+
 geom_line()+
 theme_classic()+
 xlab("Year")+
-ylab("Compositional Change Relative to 1989")+
+ylab("Compositional Change Relative to 1990")+
 ggtitle("Saddle Veg Temporal Change")+
 ylim(0,.15)
 plot_temporal_turnover_all
@@ -84,7 +84,7 @@ geom_point()+
 geom_line()+
 theme_classic()+
 xlab("Year")+
-ylab("Dispersion Change Relative to 1989")+
+ylab("Dispersion Change Relative to 1990")+
 #ylim(-.025, 0.01)+
 geom_hline(yintercept = 0)+
 ggtitle("Saddle Veg Spatial Change")
@@ -164,8 +164,7 @@ mumti_change_3
 
 turnover <- rbind(mumti_change_1, mumti_change_2, mumti_change_3)
 
-turnover %>% 
-    filter(year2 != 1989) %>% 
+plot1 <- turnover %>% 
   ggplot(aes(year2, composition_change, color = Snow_Persistence)) +
   geom_point(size = 3)+
   geom_line(lwd = 1.1)+
@@ -174,19 +173,24 @@ turnover %>%
   ylab("Compositional Change Relative to 1990")+
       scale_colour_viridis_d(option = "turbo")+
   theme(legend.title=element_blank(), text = element_text(size=18))
+# the extremes are changing the most - we know from the thermophilization analysis that these extremes are changing in different ways
+plot1
+ggsave(filename = "figure/compositional_turnover_time.jpeg", plot = plot1)
 
-turnover %>% 
-  filter(year2 != 1989) %>% 
+plot2 <- turnover %>% 
   ggplot(aes(year2, dispersion_change, color = Snow_Persistence)) +
   geom_point(size = 3)+
   geom_line(lwd = 1.1)+
   theme_classic()+
   geom_hline(yintercept = 0)+
   xlab("Year")+
-  ylab("Dispersion Relative to 1989")+
+  ylab("Dispersion Relative to 1990")+
   scale_colour_viridis_d(option = "turbo")+
   theme(legend.title=element_blank(), text = element_text(size=18))
-# the extremes are changing the most - we know from the thermophilization analysis that these extremes are changing in different ways
+# the snowier sites are getting more homogenous and the less snowy sites are getting more heterogenous
+plot2
+ggsave(filename = "figure/dispersion_time.jpeg", plot = plot2)
+
 
 # correlate changing composition to GDD, look for interactions with snow rank
 # bring in temperature data
@@ -203,11 +207,12 @@ GDD <-
   summarise(GDD = round(sum(adjusted_airtemp),0))
 colnames(GDD)[1] <- "year2"
 
-# combine turnover and GDD
-turnover_temp <- left_join(turnover, GDD)
+# combine turnover and GDD 
+turnover_temp <- left_join(turnover, GDD) 
 turnover_temp 
 fit1 <- lm(composition_change ~ GDD*Snow_Persistence, data = turnover_temp)
 summary(fit1)
+anova(fit1)
 emtrends(fit1 , specs = "Snow_Persistence", var = "GDD")
 emmeans(fit1, pairwise ~ Snow_Persistence)
 # low snow and high snow are similar, but average snow is different
@@ -217,12 +222,11 @@ turnover_temp %>%
   geom_point(size = 2)+
   theme_classic()+
     xlab("Growing Degree-Days")+
-  ylab("Compositional Change Relative to 1989")+
+  ylab("Compositional Change Relative to 1990")+
       scale_colour_viridis_d(option = "turbo")+
   scale_fill_viridis_d(option = "turbo")+
   theme(legend.title=element_blank(), text = element_text(size=18))+
   geom_smooth(method = "lm", se = T)
-
 
 # Considering time series analyses...
 fit2 <- lm(composition_change ~ year2*Snow_Persistence + lag(year2,1), data = turnover_temp)
@@ -230,12 +234,25 @@ summary(fit2)
 anova(fit2)
 emtrends(fit2 , specs = "Snow_Persistence", var = "year2")
 
-Turnover_temp <-
+turnover_temp <-
 turnover_temp %>% 
   arrange(year2)
 
+fit3 <- lm(composition_change ~ year2*Snow_Persistence, data = turnover_temp) 
+acf(resid(fit3)) # not autocorrelated
+emtrends(fit3 , specs = "Snow_Persistence", var = "year2") # the slopes are not significantly different
+anova(fit)
 
-fit3 <- lm(composition_change ~ year2, data = turnover_temp) 
-acf(resid(fit3)) # very autocorrelated residuals 
+plot3 <- turnover_temp %>% 
+  ggplot(aes(year2, composition_change, color = Snow_Persistence, fill = Snow_Persistence)) +
+  geom_point(size = 2)+
+  theme_classic()+
+  geom_smooth(method = "lm", se = T)+
+  xlab("Year")+
+  ylab("Compositional Change Relative to 1990")+
+      scale_colour_viridis_d(option = "turbo")+
+    scale_fill_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))
+plot3
 
 
