@@ -121,7 +121,7 @@ ggplot(aes(year, snow_depth, group = point_ID)) +
 
 # estimate the snowiness of each plot
 snowiness_by_plot <- 
-  snow_June_plot_means %>% 
+  snow_May_plot_means %>% 
     group_by(point_ID) %>% 
   summarise(snow_depth = round(mean(snow_depth, na.rm = T),digits = 0))
 snowiness_by_plot
@@ -141,7 +141,7 @@ veg_snow
 mumti_change_1 <- 
 veg_snow %>% 
   filter(snow_rank == 1) %>% 
-multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_1$Snow_Persistence <- "Low Snow"
 mumti_change_1$rank <- 1
 mumti_change_1 
@@ -149,7 +149,7 @@ mumti_change_1
 mumti_change_2 <- 
 veg_snow %>% 
   filter(snow_rank == 2) %>% 
-multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_2$Snow_Persistence <- "Average Snow"
 mumti_change_2$rank <- 2
 mumti_change_2 
@@ -157,7 +157,7 @@ mumti_change_2
 mumti_change_3 <- 
 veg_snow %>% 
   filter(snow_rank == 3) %>% 
-multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1989)
+multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_3$Snow_Persistence <- "High Snow"
 mumti_change_3$rank <- 3
 mumti_change_3 
@@ -165,16 +165,18 @@ mumti_change_3
 turnover <- rbind(mumti_change_1, mumti_change_2, mumti_change_3)
 
 turnover %>% 
+    filter(year2 != 1989) %>% 
   ggplot(aes(year2, composition_change, color = Snow_Persistence)) +
   geom_point(size = 3)+
   geom_line(lwd = 1.1)+
   theme_classic()+
   xlab("Year")+
-  ylab("Compositional Change Relative to 1989")+
+  ylab("Compositional Change Relative to 1990")+
       scale_colour_viridis_d(option = "turbo")+
   theme(legend.title=element_blank(), text = element_text(size=18))
 
 turnover %>% 
+  filter(year2 != 1989) %>% 
   ggplot(aes(year2, dispersion_change, color = Snow_Persistence)) +
   geom_point(size = 3)+
   geom_line(lwd = 1.1)+
