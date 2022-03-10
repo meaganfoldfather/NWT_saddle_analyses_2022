@@ -9,6 +9,7 @@ library(lmerTest)
 library(codyn)
 library(lubridate)
 library(viridisLite)
+library(picante)
 
 # bring in veg data (downloaded October 2021)
 veg_data_original<- read_csv("data/saddptqd.hh.data.csv")
@@ -140,7 +141,23 @@ snowiness_by_plot
 veg_snow <- left_join(subset_veg_abundance_known_species, snowiness_by_plot)
 veg_snow
 
-# analysis of turnover from reference time persion 
+
+# IS THIS A BETTER WAY TO LOOK AT SNOWINESS?
+mumti_change_all <- 
+  multivariate_change(df = veg_snow ,time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990, treatment.var = "snow_rank")
+
+mumti_change_all %>% 
+  ggplot(aes(year2, composition_change, color = as.factor(snow_rank))) +
+  geom_point(size = 3)+
+  geom_line(lwd = 1.1)+
+  theme_classic()+
+  xlab("Year")+
+  ylab("Compositional Change Relative to 1990")+
+      scale_colour_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))
+
+
+# analysis of turnover from reference time  
 mumti_change_1 <- 
 veg_snow %>% 
   filter(snow_rank == 1) %>% 
@@ -267,5 +284,52 @@ plot3 <- turnover_temp %>%
   theme(legend.title=element_blank(), text = element_text(size=18))
 plot3
 
-# Try continuous snow metric, and possibly a 3D plot --> the difficulty in doing this is that we need plot-specific compositional change data, which is not provided by the codyn package so will need to be calculated  by self. I did this before in a different script (need to find it). 
+# Try continuous snow metric, and possibly a 3D plot --> the difficulty in doing this is that we need plot-specific compositional change data, which is not provided by the codyn package so will need to be calculated  by self. I did this before in a different script. 
+test <- subset_veg_abundance_known_species  %>% 
+  unite(year_plot, year, plot, sep = "_")
+test
 
+test_matrix <- sample2matrix(test[,c(1,3,2)])
+test_dis <- vegdist(test_matrix, method = "bray")
+
+# ordinate with PCoA (Bray-Curtis dissimilarity) data for all years, plots in that veg class
+test_PCoA <- pcoa(test_dis)
+barplot(test_PCoA$values$Relative_eig[1:10])
+biplot.pcoa(test_PCoA)
+
+# record locations of all plots for each year
+plot_coords <- tibble(id = rownames(test_matrix), A1 =  test_PCoA$vectors[,1], A2 =  test_PCoA$vectors[,2])
+
+plot_coords <-
+  plot_coords %>% 
+  separate(id, into = c("year", "plot"))
+plot_coords
+
+# to calculate compositional change, get absolute change between each plot in 1990 and the rest of the years in A1
+only_the_base <- plot_coords %>% 
+  filter(year == 1990)
+colnames(only_the_base) <- c("year_base", "plot", "A1_base", "A2_base")
+
+plot_coords <- left_join(plot_coords, only_the_base)
+plot_coords$comp_change <- abs(plot_coords$A1-plot_coords$A1_base)
+plot_coords
+
+# bring in snow plot means
+plot_coords$plot <- as.double(plot_coords$plot)
+plot_coords$year<- as.double(plot_coords$year)
+coords_snow <- left_join(plot_coords, snowiness_by_plot)
+coords_snow
+
+
+coords_snow %>% 
+  ggplot(aes(year, comp_change, group = as.factor(snow_rank), color = as.factor(snow_rank)))+
+  geom_point()+
+  geom_smooth(method = "lm", se = F)+
+  theme_bw()
+
+
+coords_snow %>%  # whats going on with the few plots that have changed dramtically?
+  ggplot(aes(snow_depth, comp_change))+
+  geom_point()+
+  geom_smooth(method = "lm", se = F)+
+  theme_bw()
