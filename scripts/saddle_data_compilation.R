@@ -1,6 +1,6 @@
 # Bring in long-term saddle vegetation data, temperature data, and snowpack data; examine temporal patterns in each
 # M. F. Oldfather
-# 20220307
+# 20220310
 
 #libraries
 library(tidyverse)
@@ -67,6 +67,10 @@ subset_veg_abundance_known_species %>%
 mumti_change <- multivariate_change(df=subset_veg_abundance_known_species, time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change 
 
+# add in zero for 1990
+baseline <- tibble(year = 1990, year2 = 1990, composition_change = 0, dispersion_change = 0)
+mumti_change <- rbind(mumti_change, baseline)
+
 plot_temporal_turnover_all<- mumti_change %>% 
 ggplot(aes(year2, composition_change)) +
 geom_point()+
@@ -74,8 +78,7 @@ geom_line()+
 theme_classic()+
 xlab("Year")+
 ylab("Compositional Change Relative to 1990")+
-ggtitle("Saddle Veg Temporal Change")+
-ylim(0,.15)
+ggtitle("Saddle Veg Temporal Change")
 plot_temporal_turnover_all
 
 plot_spatial_turnover_all<- mumti_change %>% 
@@ -144,6 +147,9 @@ veg_snow %>%
 multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_1$Snow_Persistence <- "Low Snow"
 mumti_change_1$rank <- 1
+# add in zero for 1990
+baseline_1 <- tibble(year = 1990, year2 = 1990, composition_change = 0, dispersion_change = 0, Snow_Persistence = "Low Snow",  rank = 1)
+mumti_change_1 <- rbind(mumti_change_1, baseline_1)
 mumti_change_1 
 
 mumti_change_2 <- 
@@ -152,6 +158,8 @@ veg_snow %>%
 multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_2$Snow_Persistence <- "Average Snow"
 mumti_change_2$rank <- 2
+baseline_2 <- tibble(year = 1990, year2 = 1990, composition_change = 0, dispersion_change = 0, Snow_Persistence = "Average Snow",  rank = 2)
+mumti_change_2 <- rbind(mumti_change_2, baseline_2)
 mumti_change_2 
 
 mumti_change_3 <- 
@@ -160,6 +168,8 @@ veg_snow %>%
 multivariate_change(time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change_3$Snow_Persistence <- "High Snow"
 mumti_change_3$rank <- 3
+baseline_3 <- tibble(year = 1990, year2 = 1990, composition_change = 0, dispersion_change = 0, Snow_Persistence = "High Snow",  rank = 3)
+mumti_change_3 <- rbind(mumti_change_3, baseline_3)
 mumti_change_3 
 
 turnover <- rbind(mumti_change_1, mumti_change_2, mumti_change_3)
@@ -229,19 +239,21 @@ turnover_temp %>%
   geom_smooth(method = "lm", se = T)
 
 # Considering time series analyses...
-fit2 <- lm(composition_change ~ year2*Snow_Persistence + lag(year2,1), data = turnover_temp)
-summary(fit2)
-anova(fit2)
-emtrends(fit2 , specs = "Snow_Persistence", var = "year2")
-
 turnover_temp <-
 turnover_temp %>% 
   arrange(year2)
 
+fit2 <- lm(composition_change ~ year2*Snow_Persistence + lag(year2,1), data = turnover_temp)
+summary(fit2)
+acf(resid(fit2)) # autocorrelated
+anova(fit2)
+emtrends(fit2 , specs = "Snow_Persistence", var = "year2")
+
+
 fit3 <- lm(composition_change ~ year2*Snow_Persistence, data = turnover_temp) 
-acf(resid(fit3)) # not autocorrelated
-emtrends(fit3 , specs = "Snow_Persistence", var = "year2") # the slopes are not significantly different
-anova(fit)
+acf(resid(fit3)) # autocorrelated
+emtrends(fit3 , specs = "Snow_Persistence", var = "year2") # average snow slope is different than low snow
+anova(fit3)
 
 plot3 <- turnover_temp %>% 
   ggplot(aes(year2, composition_change, color = Snow_Persistence, fill = Snow_Persistence)) +
@@ -255,4 +267,5 @@ plot3 <- turnover_temp %>%
   theme(legend.title=element_blank(), text = element_text(size=18))
 plot3
 
+# Try continuous snow metric, and possibly a 3D plot --> the difficulty in doing this is that we need plot-specific compositional change data, which is not provided by the codyn package so will need to be calculated  by self. I did this before in a different script (need to find it). 
 
