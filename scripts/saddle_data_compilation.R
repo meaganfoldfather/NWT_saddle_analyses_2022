@@ -142,19 +142,19 @@ veg_snow <- left_join(subset_veg_abundance_known_species, snowiness_by_plot)
 veg_snow
 
 
-# IS THIS A BETTER WAY TO LOOK AT SNOWINESS?
-mumti_change_all <- 
-  multivariate_change(df = veg_snow ,time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990, treatment.var = "snow_rank")
-
-mumti_change_all %>% 
-  ggplot(aes(year2, composition_change, color = as.factor(snow_rank))) +
-  geom_point(size = 3)+
-  geom_line(lwd = 1.1)+
-  theme_classic()+
-  xlab("Year")+
-  ylab("Compositional Change Relative to 1990")+
-      scale_colour_viridis_d(option = "turbo")+
-  theme(legend.title=element_blank(), text = element_text(size=18))
+# IS THIS A BETTER WAY TO LOOK AT SNOWINESS? As a treatment - I think this is doing the exact same thing. 
+# mumti_change_all <- 
+#   multivariate_change(df = veg_snow ,time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990, treatment.var = "snow_rank")
+# 
+# mumti_change_all %>% 
+#   ggplot(aes(year2, composition_change, color = as.factor(snow_rank))) +
+#   geom_point(size = 3)+
+#   geom_line(lwd = 1.1)+
+#   theme_classic()+
+#   xlab("Year")+
+#   ylab("Compositional Change Relative to 1990")+
+#       scale_colour_viridis_d(option = "turbo")+
+#   theme(legend.title=element_blank(), text = element_text(size=18))
 
 
 # analysis of turnover from reference time  
@@ -311,7 +311,7 @@ only_the_base <- plot_coords %>%
 colnames(only_the_base) <- c("year_base", "plot", "A1_base", "A2_base")
 
 plot_coords <- left_join(plot_coords, only_the_base)
-plot_coords$comp_change <- abs(plot_coords$A1-plot_coords$A1_base)
+plot_coords$comp_change <- abs(plot_coords$A1+plot_coords$A1_base)
 plot_coords
 
 # bring in snow plot means
