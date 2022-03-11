@@ -10,6 +10,7 @@ library(codyn)
 library(lubridate)
 library(viridisLite)
 library(picante)
+library(plotly)
 
 # bring in veg data (downloaded October 2021)
 veg_data_original<- read_csv("data/saddptqd.hh.data.csv")
@@ -311,7 +312,7 @@ only_the_base <- plot_coords %>%
 colnames(only_the_base) <- c("year_base", "plot", "A1_base", "A2_base")
 
 plot_coords <- left_join(plot_coords, only_the_base)
-plot_coords$comp_change <- abs(plot_coords$A1+plot_coords$A1_base)
+plot_coords$comp_change <- abs(plot_coords$A1-plot_coords$A1_base)
 plot_coords
 
 # bring in snow plot means
@@ -320,16 +321,33 @@ plot_coords$year<- as.double(plot_coords$year)
 coords_snow <- left_join(plot_coords, snowiness_by_plot)
 coords_snow
 
-
 coords_snow %>% 
   ggplot(aes(year, comp_change, group = as.factor(snow_rank), color = as.factor(snow_rank)))+
   geom_point()+
   geom_smooth(method = "lm", se = F)+
   theme_bw()
 
-
-coords_snow %>%  # whats going on with the few plots that have changed dramtically?
+coords_snow %>%  # whats going on with the few plots that have changed dramatically? it is plot 28
   ggplot(aes(snow_depth, comp_change))+
   geom_point()+
   geom_smooth(method = "lm", se = F)+
   theme_bw()
+
+coords_snow <-
+coords_snow %>% 
+  filter(!plot == 28)
+
+fit_plots <- lmer(comp_change ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow)
+summary(fit_plots)
+anova(fit_plots)
+
+acf(residuals(fit_plots)) # not autocorrelated
+plot_ly(z=coords_snow$comp_change, x=coords_snow$year, y=coords_snow$snow_depth, type="scatter3d", mode="markers", color=coords_snow$comp_change)
+
+# try to make a smoother plot
+new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
+new_data
+new_data$preds <- predict(object = fit_plots, newdata = new_data, re = NA)
+plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
+  layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Relative Compositional Change")))
+
