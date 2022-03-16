@@ -68,7 +68,12 @@ summary(fit_temp_plots)
 anova(fit_temp_plots)
 acf(residuals(fit_temp_plots)) # not autocorrelated, do I need to rearrange the df?
 
+fit_temp_simple_quad <- lmer(WCMtemp ~ year*snow_depth + I(snow_depth^2) + (1|plot) + (1|year), data = weighted_clm )
+summary(fit_temp_simple_quad)
 anova(fit_temp, fit_temp_plots)
+anova(fit_temp, fit_temp_simple_quad)
+anova(fit_temp_plots, fit_temp_simple_quad)
+# fit with simple quadratic is best
 
 #3Dplot
 plot_ly(z=weighted_clm$WCMtemp, x=weighted_clm$year, y=weighted_clm$snow_depth, type="scatter3d", mode="markers", color=weighted_clm$WCMtemp)
@@ -76,6 +81,6 @@ plot_ly(z=weighted_clm$WCMtemp, x=weighted_clm$year, y=weighted_clm$snow_depth, 
 # try to make a smoother plot
 new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
 new_data
-new_data$preds <- predict(object = fit_temp, newdata = new_data, re = NA)
+new_data$preds <- predict(object = fit_temp_simple_quad, newdata = new_data, re = NA)
 plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
   layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Community-weighted Climate Niche - Temperature")))
