@@ -34,7 +34,7 @@ veg_snow_niche[veg_snow_niche$snow_rank == 3, "Snow_Persistence"] <- "High Snow"
 # calculate thermal niche for each plot in each year
 weighted_clm <- 
 veg_snow_niche %>% 
-  group_by(year, snow_rank, Snow_Persistence, plot) %>% 
+  group_by(year, snow_rank, Snow_Persistence, snow_depth, plot) %>% 
   summarise(WCMcwd = weighted.mean(CLMcwd, hits, na.rm = T), 
             WCMprecip = weighted.mean(CLMprecip, hits, na.rm = T),
             WCMtemp = weighted.mean(CLMtemp, hits, na.rm = T),
@@ -58,3 +58,24 @@ fit_temp <-lmer(WCMtemp ~ year*Snow_Persistence + (1|plot) + (1|year), data = we
 summary(fit_temp)
 anova(fit_temp)
 emtrends(fit_temp , specs = "Snow_Persistence", var = "year")
+
+fit_temp <-lmer(WCMtemp ~ year*snow_depth + (1|plot) + (1|year), data = weighted_clm )   
+summary(fit_temp)
+anova(fit_temp)
+
+fit_temp_plots <- lmer(WCMtemp ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = weighted_clm )
+summary(fit_temp_plots)
+anova(fit_temp_plots)
+acf(residuals(fit_temp_plots)) # not autocorrelated, do I need to rearrange the df?
+
+anova(fit_temp, fit_temp_plots)
+
+#3Dplot
+plot_ly(z=weighted_clm$WCMtemp, x=weighted_clm$year, y=weighted_clm$snow_depth, type="scatter3d", mode="markers", color=weighted_clm$WCMtemp)
+
+# try to make a smoother plot
+new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
+new_data
+new_data$preds <- predict(object = fit_temp, newdata = new_data, re = NA)
+plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
+  layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Community-weighted Climate Niche - Temperature")))

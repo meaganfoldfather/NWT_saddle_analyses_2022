@@ -340,14 +340,19 @@ coords_snow %>%
 fit_plots <- lmer(comp_change ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow)
 summary(fit_plots)
 anova(fit_plots)
-
-acf(residuals(fit_plots)) # not autocorrelated
+acf(residuals(fit_plots)) # not autocorrelated (do I need to rearrange the df?)
 plot_ly(z=coords_snow$comp_change, x=coords_snow$year, y=coords_snow$snow_depth, type="scatter3d", mode="markers", color=coords_snow$comp_change)
+
+# make simpler model to compare to
+fit_plots_simple <- lmer(comp_change ~ year*snow_depth + (1|plot) + (1|year), data = coords_snow)
+summary(fit_plots_simple)
+anova(fit_plots_simple)
+anova(fit_plots, fit_plots_simple)
 
 # try to make a smoother plot
 new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
 new_data
-new_data$preds <- predict(object = fit_plots, newdata = new_data, re = NA)
+new_data$preds <- predict(object = fit_plots_simple, newdata = new_data, re = NA)
 plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
   layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Relative Compositional Change")))
 
