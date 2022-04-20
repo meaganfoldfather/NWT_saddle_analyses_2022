@@ -103,18 +103,38 @@ plot_spatial_turnover_all
 # bring in snow data
 # bring in snow daily data
 snow <- read_csv("data/saddsnow.dw.data.csv")
-snow$date <-ymd(snow$date)
+snow$date_cal <-ymd(snow$date)
 snow$year <- year(snow$date) 
 snow$month <- month(snow$date)
 # first year of surveys 
 min(snow$year) # 1992
 
-# focus on May depth
+#Focus on May snow depth
+# count how many surveys across years for May
+snow %>% 
+  filter(month == 5) %>% 
+  group_by(year) %>%
+  count(date_cal) %>% 
+  view() # 1-3 surveys except for 2008
+  
+# no surveys in May in 2008 --> could be replaced by 4/29/2008 survey
+snow %>% 
+  filter(year == 2008) %>% 
+  count(date_cal)
+
+snow %>% 
+  filter(date_cal == "2008-04-29") 
+
+# manually modify date to month = 5
+snow[snow$date_cal == "2008-04-29", "month"] <- 5
+
+# summarize May depth
 snow_May_plot_means <-
 snow %>% 
   filter(month == 5) %>% 
   group_by(year, point_ID) %>% 
   summarise(snow_depth = round(mean(mean_depth, na.rm = T),digits = 0))
+
 
 # look at snow depth through time - no directional patterns - supports taking a average over years; there is some evidence of snowier plots becomes less snowy through time... more evident in May than June
 snow_May_plot_means %>% 
