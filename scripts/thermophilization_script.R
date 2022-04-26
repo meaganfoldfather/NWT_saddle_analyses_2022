@@ -25,7 +25,6 @@ colnames(climate_niche_means)[5] <- "USDA_name"
 veg_snow_niche <- left_join(vegetation, climate_niche_means)
 veg_snow_niche
 
-
 # add factor for snowiness metric
 veg_snow_niche$Snow_Persistence <- "Low Snow"
 veg_snow_niche[veg_snow_niche$snow_rank == 2, "Snow_Persistence"] <- "Average Snow"
@@ -54,26 +53,32 @@ plot_thermo <- weighted_clm %>%
 
 ggsave(filename = "figure/thermophilzation.jpeg", plot_thermo)
 
+# snow rank
 fit_temp <-lmer(WCMtemp ~ year*Snow_Persistence + (1|plot) + (1|year), data = weighted_clm )   
 summary(fit_temp)
 anova(fit_temp)
 emtrends(fit_temp , specs = "Snow_Persistence", var = "year")
 
+# snow continious
 fit_temp <-lmer(WCMtemp ~ year*snow_depth + (1|plot) + (1|year), data = weighted_clm )   
 summary(fit_temp)
 anova(fit_temp)
 
+# year by quadratic snow interaction
 fit_temp_plots <- lmer(WCMtemp ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = weighted_clm )
 summary(fit_temp_plots)
 anova(fit_temp_plots)
 acf(residuals(fit_temp_plots)) # not autocorrelated, do I need to rearrange the df?
 
+# snow quadratic no interaction 
 fit_temp_simple_quad <- lmer(WCMtemp ~ year*snow_depth + I(snow_depth^2) + (1|plot) + (1|year), data = weighted_clm )
 summary(fit_temp_simple_quad)
+
+# compare models
 anova(fit_temp, fit_temp_plots)
 anova(fit_temp, fit_temp_simple_quad)
 anova(fit_temp_plots, fit_temp_simple_quad)
-# fit with simple quadratic is best
+# fit with quadratic interaction is best
 
 #3Dplot
 plot_ly(z=weighted_clm$WCMtemp, x=weighted_clm$year, y=weighted_clm$snow_depth, type="scatter3d", mode="markers", color=weighted_clm$WCMtemp)
@@ -81,6 +86,6 @@ plot_ly(z=weighted_clm$WCMtemp, x=weighted_clm$year, y=weighted_clm$snow_depth, 
 # try to make a smoother plot
 new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
 new_data
-new_data$preds <- predict(object = fit_temp_simple_quad, newdata = new_data, re = NA)
+new_data$preds <- predict(object = fit_temp_plots, newdata = new_data, re = NA)
 plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
   layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Community-weighted Climate Niche - Temperature")))
