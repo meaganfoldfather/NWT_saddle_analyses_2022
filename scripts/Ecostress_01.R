@@ -62,6 +62,20 @@ coords_snow_es %>%
   scale_colour_viridis_d(option = "viridis")
  # The most composition change is in cold (less stressed?), exposed sites. 
 
+# does 2018 and 2019 composition change (same as years from which we have ECOSTRESS values) correlate with ECOSTRESS values,supporting a shift to less stressed species
+coords_snow_es %>% 
+  filter(year == 2018:2019) %>% 
+  ggplot(aes(comp_change, mean, color = as.factor(snow_rank)))+
+  geom_point() +
+  geom_smooth(se = F, method = "lm")+
+  theme_classic()+
+  #facet_wrap(.~snow_rank)+
+  scale_colour_viridis_d(option = "viridis")+
+  xlab("Compositional Change in 2018,2019")+
+  ylab("Average ECOSTRESS")
+#Yes, especially in more exposed sites. Interesting that all the snow ranks have the same approx. mean ECOSTRESS for sites that haven't changed very much
+
+
 #bring in thermophilization data - weighted_clim is the useful main dataframe
 source("scripts/thermophilization_script.R")
 es_weighted_clm <-
