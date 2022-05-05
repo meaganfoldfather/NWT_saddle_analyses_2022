@@ -65,6 +65,26 @@ subset_veg_abundance_known_species <-
 subset_veg_abundance_known_species %>% 
   filter(year != 1989)
 
+# merge in info about veg classifications to remove SF plots
+# FF=fellfield, DM=dry meadow, MM=moist meadow, ST=shrub tundra, SB=snowbed, WM=wet meadow, SF=snowfence
+veg_classes <- read_csv("data/saddgrid_npp.hh.data.csv")
+
+#subset to a more recent year and only subsample A
+veg_classes <-
+  veg_classes %>% 
+  filter(year == 2010, subsample == "A")
+veg_classes<-veg_classes[,c(5,7)]
+colnames(veg_classes) <- c("plot", "veg_class")
+
+# merge community data and veg classes
+subset_veg_abundance_known_species <- left_join(subset_veg_abundance_known_species,veg_classes)
+subset_veg_abundance_known_species
+unique(subset_veg_abundance_known_species$veg_class)
+
+subset_veg_abundance_known_species <-
+  subset_veg_abundance_known_species %>% 
+  filter(veg_class != "SF")
+
 # analysis of turnover from reference time persion 
 mumti_change <- multivariate_change(df=subset_veg_abundance_known_species, time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990)
 mumti_change 
@@ -94,9 +114,6 @@ ylab("Dispersion Change Relative to 1990")+
 geom_hline(yintercept = 0)+
 ggtitle("Saddle Veg Spatial Change")
 plot_spatial_turnover_all
-
-#Notes: 
-# - do we need to remove Snow Fence plots?
 
 #Next steps - divide by different snowiness quantiles and re-do above analyses - do we see certain parts of the landscape changing more?
 
@@ -263,7 +280,7 @@ summary(fit1)
 anova(fit1)
 emtrends(fit1 , specs = "Snow_Persistence", var = "GDD")
 emmeans(fit1, pairwise ~ Snow_Persistence)
-# low snow and high snow are similar, but average snow is different
+# low snow and high snow are similar, but average snow is different in how it is responding to increasing GDD
 
 turnover_temp %>% 
   ggplot(aes(GDD, composition_change, color = Snow_Persistence, fill = Snow_Persistence))+
@@ -347,15 +364,11 @@ coords_snow %>%
   geom_smooth(method = "lm", se = F)+
   theme_bw()
 
-coords_snow %>%  # whats going on with the few plots that have changed dramatically? it is plot 28
+coords_snow %>%  
   ggplot(aes(snow_depth, comp_change))+
   geom_point()+
   geom_smooth(method = "lm", se = F)+
   theme_bw()
-
-coords_snow <-
-coords_snow %>% 
-  filter(!plot == 28)
 
 fit_plots <- lmer(comp_change ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow)
 summary(fit_plots)
