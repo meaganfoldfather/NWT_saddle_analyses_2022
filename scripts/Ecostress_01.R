@@ -37,6 +37,35 @@ es_snow %>%
   geom_smooth(method = "lm", color = "black", lty = "dashed", se = F)
 summary(lm(mean ~ snow_depth, data = es_snow)) # no significant relationship 
 
+# bring in topography datasets, merge w/ es, look at correlations between ES and topography
+topo <- read_csv("data/Elisa_plot_values/SaddleGrid_NEON_2020_buffer2m.csv")
+topo$ALT_SITECODE <- str_replace(topo$ALT_SITECODE, "A", "1")
+topo$ALT_SITECODE <- str_sub(topo$ALT_SITECODE, -3)
+topo$ALT_SITECODE <- as.numeric(topo$ALT_SITECODE)
+colnames(topo)[1] <- "plot"
+
+es_topo <-
+  left_join(es_snow,topo)
+
+es_topo %>% 
+  ggplot(aes(aspect_norhtness, mean))+
+  geom_point()+
+  theme_classic()+
+  xlab("Northness")+
+  ylab("Average ECOSTRESS")+
+  geom_smooth(method = "lm", color = "black", lty = "solid", se = F)
+summary(lm(mean ~ aspect_norhtness, data = es_topo)) # ES is tightly correlated with northness with lower values being warmer 
+
+# Is snow correlated with aspect? No
+es_topo %>% 
+  ggplot(aes(aspect_norhtness, snow_depth))+
+  geom_point()+
+  theme_classic()+
+  xlab("Northness")+
+  ylab("Snowiness")+
+  geom_smooth(method = "lm", color = "black", lty = "dashed", se = F)
+summary(lm(snow_depth ~ aspect_norhtness, data = es_topo)) # ES is tightly correlated with northness with lower values being warmer as expected
+
 # bring in compositional change data - coords_snow from compilation script - and merge with es
 coords_snow
 coords_snow_es <- 
@@ -64,7 +93,7 @@ coords_snow_es %>%
 
 # does 2018 and 2019 composition change (same as years from which we have ECOSTRESS values) correlate with ECOSTRESS values,supporting a shift to less stressed species
 coords_snow_es %>% 
-  filter(year == 2018:2019) %>% 
+  filter(year == 2018:2020) %>% 
   ggplot(aes(comp_change, mean, color = as.factor(snow_rank)))+
   geom_point() +
   geom_smooth(se = F, method = "lm")+
@@ -96,5 +125,5 @@ es_weighted_clm %>%
   facet_wrap(.~snow_rank)+
   theme_classic()+
   scale_colour_viridis_d(option = "viridis")
-# There are some issues still ... why is there plots with es_rank = NA? That may be plot 28 ... which was removed. But quickly, there seems to be that ecostress largely impacts the exposed sites, with the coldest sites showing reverse thermophilzation 
+#Quickly, there seems to be that ecostress largely impacts the exposed sites, with the coldest sites showing reverse thermophilzation 
       

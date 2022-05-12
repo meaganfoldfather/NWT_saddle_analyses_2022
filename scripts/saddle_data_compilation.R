@@ -43,7 +43,7 @@ veg_abundance[is.na(veg_abundance$hits), "hits"] <- 0
 veg_abundance
  
 # remove unknown species and non-species --> "veg_abundance_known_species"
-non_plant <- c("2RF", "2LICHN", "2X","2LTR","2BARE", "2HOLE", "2MOSS", "2SCATE")
+non_plant <- c("2RF", "2LICHN", "2X","2LTR","2BARE", "2HOLE", "2MOSS", "2SCATE", "2GENT", "2SCAT")
 unknown_species <- c("2FORB","2MOSS","2GRAM", "2UNKSC", "POA","2UNK", "CAREX", "2COMP", "STELL","CACA12", "CAREX4", "CAREX2", "CAREX1", "CAREX6", "CAREX7") 
 
 veg_abundance_known_species <-
