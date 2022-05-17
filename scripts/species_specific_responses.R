@@ -3,6 +3,9 @@
 source("scripts/saddle_data_compilation.R")  # use veg_snow
 source("scripts/thermophilization_script.R")
 veg_snow
+veg_snow$SnowPersistence <- "Average Snow"
+veg_snow[veg_snow$snow_rank == 1, "SnowPersistence"] <- "Low Snow"
+veg_snow[veg_snow$snow_rank == 3, "SnowPersistence"] <- "High Snow"
 
 # look at species with largest change in hits through time (includes zeros)
 species_slopes <-
@@ -67,22 +70,32 @@ ggplot(aes(USDA_code, slope))+
 # Plot Kobresia through time
 veg_snow %>% 
   filter(USDA_code == "KOMY") %>% 
-  ggplot(aes(year, hits)) +
+  ggplot(aes(year, hits, color = SnowPersistence)) +
   geom_point()+
   geom_line(aes(group = plot))+
-  theme_bw()+
-  facet_wrap(.~ snow_rank)+
-  ggtitle("Kobresia") # I wonder if the plots that have the highest increased in Kobresia in snow rank 1 are the ones with low ES values? 
+  theme_classic()+
+  xlab("Year")+
+  ylab("Abundance")+
+  facet_wrap(.~ SnowPersistence)+
+  ggtitle("Kobresia myosuroides") + 
+     scale_color_viridis_d(option = "turbo")+
+   theme(legend.title=element_blank(), text = element_text(size=16))
+# I wonder if the plots that have the highest increased in Kobresia in snow rank 1 are the ones with low ES values? 
+
 
 # Plot Deschampsia through time
 veg_snow %>% 
   filter(USDA_code == "DECE") %>% 
-  ggplot(aes(year, hits)) +
+  ggplot(aes(year, hits, color = SnowPersistence)) +
   geom_point()+
   geom_line(aes(group = plot))+
-  theme_bw()+
-  facet_wrap(.~ snow_rank)+
-  ggtitle("Deschampsia")
+  theme_classic()+
+  xlab("Year")+
+  ylab("Abundance")+
+  facet_wrap(.~ SnowPersistence)+
+  ggtitle("Deschampsia cespitosa") + 
+     scale_color_viridis_d(option = "turbo")+
+   theme(legend.title=element_blank(), text = element_text(size=16))
 
 # Other canidates: Artemesia scopolurim (ARSC) and Minuartia obtusiloba (MIOB2) from Sarah 
 # Geum is decreasing the less snow sites,  but it's thermal niche is ~0

@@ -240,7 +240,7 @@ plot1 <- turnover %>%
   theme(legend.title=element_blank(), text = element_text(size=18))
 # the extremes are changing the most - we know from the thermophilization analysis that these extremes are changing in different ways
 plot1
-ggsave(filename = "figure/compositional_turnover_time.jpeg", plot = plot1)
+#ggsave(filename = "figure/compositional_turnover_time.jpeg", plot = plot1)
 
 plot2 <- turnover %>% 
   ggplot(aes(year2, dispersion_change, color = Snow_Persistence)) +
@@ -254,7 +254,7 @@ plot2 <- turnover %>%
   theme(legend.title=element_blank(), text = element_text(size=18))
 # the snowier sites are getting more homogenous and the less snowy sites are getting more heterogenous
 plot2
-ggsave(filename = "figure/dispersion_time.jpeg", plot = plot2)
+#ggsave(filename = "figure/dispersion_time.jpeg", plot = plot2)
 
 
 # correlate changing composition to GDD, look for interactions with snow rank
@@ -272,6 +272,17 @@ GDD <-
   summarise(GDD = round(sum(adjusted_airtemp),0))
 colnames(GDD)[1] <- "year2"
 
+GDD %>% 
+  ggplot(aes(year2, GDD))+
+  geom_point()+
+  theme_classic()+
+  xlab("Year")+
+  ylab("Growing Degree-Days")+
+  scale_colour_viridis_d(option = "turbo")+
+  theme(legend.title=element_blank(), text = element_text(size=18))+
+  geom_smooth(method = "lm", se = F, color = "black")
+  
+  
 # combine turnover and GDD 
 turnover_temp <- left_join(turnover, GDD) 
 turnover_temp 
@@ -358,34 +369,73 @@ plot_coords$year<- as.double(plot_coords$year)
 coords_snow <- left_join(plot_coords, snowiness_by_plot)
 coords_snow
 
+coords_snow$snow_rank <- as.factor(coords_snow$snow_rank)
+
 coords_snow %>% 
-  ggplot(aes(year, comp_change, group = as.factor(snow_rank), color = as.factor(snow_rank)))+
+  ggplot(aes(year, comp_change, group = snow_rank, color = as.factor(snow_rank)))+
   geom_point()+
   geom_smooth(method = "lm", se = F)+
   theme_bw()
 
-coords_snow %>%  
-  ggplot(aes(snow_depth, comp_change))+
-  geom_point()+
-  geom_smooth(method = "lm", se = F)+
-  theme_bw()
+# model fits - categorical
+fit_categorical <- lmer(comp_change ~ year*snow_rank + (1|plot) + (1|year), data = coords_snow)
+summary(fit_categorical)
+emtrends(fit_categorical , specs = "snow_rank", var = "year")
+emmeans(fit_categorical, pairwise ~ snow_rank)
+# low snow has higher mean than average, overlaps with high snow
+# high and low snow are overlapping, as are high and average
 
-fit_plots <- lmer(comp_change ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow)
-summary(fit_plots)
-anova(fit_plots)
-acf(residuals(fit_plots)) # not autocorrelated (do I need to rearrange the df?)
+
+
+# model fits - continuous
+fit_plot_quad_int <- lmer(comp_change ~ year*snow_depth + year*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow)
+summary(fit_plot_quad_int)
+anova(fit_plot_quad_int)
+acf(residuals(fit_plot_quad_int)) # not autocorrelated (do I need to rearrange the df?)
 plot_ly(z=coords_snow$comp_change, x=coords_snow$year, y=coords_snow$snow_depth, type="scatter3d", mode="markers", color=coords_snow$comp_change)
 
 # make simpler model to compare to
-fit_plots_simple <- lmer(comp_change ~ year*snow_depth + (1|plot) + (1|year), data = coords_snow)
-summary(fit_plots_simple)
-anova(fit_plots_simple)
-anova(fit_plots, fit_plots_simple)
+fit_plots_quad <- lmer(comp_change ~ year*snow_depth + I(snow_depth^2) +(1|plot) + (1|year), data = coords_snow)
+summary(fit_plots_quad)
+anova(fit_plots_quad)
+anova(fit_plot_quad_int, fit_plots_quad)
+
+# make simpler model to compare to
+fit_plots <- lmer(comp_change ~ year*snow_depth +(1|plot) + (1|year), data = coords_snow)
+summary(fit_plots)
+anova(fit_plots)
+anova(fit_plots_quad, fit_plots)
 
 # try to make a smoother plot
 new_data <- as_tibble(expand.grid(year = 1990:2020, snow_depth = 0:350))
 new_data
-new_data$preds <- predict(object = fit_plots_simple, newdata = new_data, re = NA)
+new_data$preds <- predict(object = fit_plots, newdata = new_data, re = NA)
 plot_ly(z=new_data$preds, x=new_data$year, y=new_data$snow_depth, type="scatter3d", mode="markers", color=new_data$preds) %>% 
   layout(scene = list(xaxis = list(title = "Year"), yaxis = list(title = "Snow Persistence"), zaxis = list(title = "Relative Compositional Change")))
 
+
+# add in GDD again 
+colnames(GDD)[1]<- "year"
+coords_snow_GDD <-
+  left_join(coords_snow,GDD)
+coords_snow_GDD
+
+#categorical
+fit_categorical <- lmer(comp_change ~ GDD*snow_rank + (1|plot) + (1|year), data = coords_snow_GDD)
+summary(fit_categorical)
+emtrends(fit_categorical , specs = "snow_rank", var = "GDD")
+emmeans(fit_categorical, pairwise ~ snow_rank)
+# same thing where low is different only from average
+
+# continuious
+fit_GDD_quad_int <- lmer(comp_change ~ GDD*snow_depth + GDD*I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow_GDD)
+summary(fit_GDD_quad_int)
+
+fit_GDD_quad <- lmer(comp_change ~ GDD*snow_depth + I(snow_depth^2) + (1|plot) + (1|year), data = coords_snow_GDD)
+summary(fit_GDD_quad)
+
+fit_GDD <- lmer(comp_change ~ GDD*snow_depth + (1|plot) + (1|year), data = coords_snow_GDD)
+summary(fit_GDD)
+
+anova(fit_GDD_quad_int,fit_GDD_quad)
+anova(fit_GDD,fit_GDD_quad)

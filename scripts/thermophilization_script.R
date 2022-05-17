@@ -51,13 +51,14 @@ plot_thermo <- weighted_clm %>%
     scale_fill_viridis_d(option = "turbo")+
    theme(legend.title=element_blank(), text = element_text(size=18))
 
-ggsave(filename = "figure/thermophilzation.jpeg", plot_thermo)
+#ggsave(filename = "figure/thermophilzation.jpeg", plot_thermo)
 
 # snow rank
 fit_temp <-lmer(WCMtemp ~ year*Snow_Persistence + (1|plot) + (1|year), data = weighted_clm )   
 summary(fit_temp)
 anova(fit_temp)
 emtrends(fit_temp , specs = "Snow_Persistence", var = "year")
+# Average snow has no change, high snow is slightly increasing, low is strongly decreasing
 
 # snow continious
 fit_temp <-lmer(WCMtemp ~ year*snow_depth + (1|plot) + (1|year), data = weighted_clm )   
