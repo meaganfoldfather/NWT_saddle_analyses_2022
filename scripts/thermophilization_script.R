@@ -29,6 +29,7 @@ veg_snow_niche
 veg_snow_niche$Snow_Persistence <- "Low Snow"
 veg_snow_niche[veg_snow_niche$snow_rank == 2, "Snow_Persistence"] <- "Average Snow"
 veg_snow_niche[veg_snow_niche$snow_rank == 3, "Snow_Persistence"] <- "High Snow"
+veg_snow_niche$Snow_Persistence <- factor(veg_snow_niche$Snow_Persistence, levels = c("Low Snow", "Average Snow", "High Snow"))
 
 # calculate thermal niche for each plot in each year
 weighted_clm <- 
@@ -47,10 +48,10 @@ plot_thermo <- weighted_clm %>%
   theme_classic()+
     xlab("Year")+
   ylab("Community-weighted Climate Niche - Temperature")+
-      scale_colour_viridis_d(option = "turbo")+
-    scale_fill_viridis_d(option = "turbo")+
+      scale_colour_viridis_d(option = "mako")+
+    scale_fill_viridis_d(option = "mako")+
    theme(legend.title=element_blank(), text = element_text(size=18))
-
+plot_thermo
 #ggsave(filename = "figure/thermophilzation.jpeg", plot_thermo)
 
 # snow rank
