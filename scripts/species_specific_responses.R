@@ -1,5 +1,7 @@
 # Taking a stab at  looking at the specific species driving the turnover and thermophilization trends
 
+library(mblm)
+
 #source("scripts/saddle_data_compilation.R")  # use veg_snow
 source("scripts/thermophilization_script.R")
 veg_snow
@@ -110,19 +112,35 @@ slope_niches
 slope_niches$SnowPersistence <- "Average Snow"
 slope_niches[slope_niches$snow_rank == 1, "SnowPersistence"] <- "Low Snow"
 slope_niches[slope_niches$snow_rank == 3, "SnowPersistence"] <- "High Snow"
-slope_niches$Snow_Persistence <- factor(slope_niches$Snow_Persistence, levels = c("Low Snow", "Average Snow", "High Snow"))
+slope_niches$SnowPersistence <- factor(slope_niches$SnowPersistence, levels = c("Low Snow", "Average Snow", "High Snow"))
 
 slope_niches %>% 
-  ggplot(aes(CLMtemp, slope, color = SnowPersistence))+
+  ggplot(aes(CLMtemp, slope, color = SnowPersistence, fill  = SnowPersistence))+
   geom_point()+
   theme_bw()+
     theme_classic()+
-  ylab("Slope")+
+    facet_wrap(.~ SnowPersistence)+
+  ylab("Temporal Change in Abundance")+
   xlab("Thermal Niche")+
-  facet_wrap(.~ SnowPersistence)+
+  geom_smooth(data =slope_niches[slope_niches$snow_rank == 1,], method = "lm", se = T, lty = "solid")+
+    geom_smooth(data =slope_niches[slope_niches$snow_rank == 2:3,], method = "lm", se = T, lty = "dashed")+
     scale_color_viridis_d(option = "mako")+
-   theme(legend.title=element_blank(), text = element_text(size=16))
+  scale_fill_viridis_d(option = "mako")+
+   theme(legend.title=element_blank(), legend.position = "none", text = element_text(size=18))
+
 # This plot is even more convincing that largely the patterns are driven by the two species discussed above, except maybe in low snow where some warm species are being lost too 
+summary(lm(slope ~ CLMtemp, data = slope_niches[slope_niches$snow_rank == 1,])) # significant! But also huge leverage of Kobmyo --> try Theil Sen estimator
+summary(mblm(slope ~ CLMtemp, repeated = F, data = na.omit(slope_niches[slope_niches$snow_rank == 1,])))
+# still significant!
+
+
+summary(lm(slope ~ CLMtemp, data = slope_niches[slope_niches$snow_rank == 2,])) # not significant
+summary(mblm(slope ~ CLMtemp, repeated = F, data = na.omit(slope_niches[slope_niches$snow_rank == 2,]))) # significantly zero
+
+summary(lm(slope ~ CLMtemp, data = slope_niches[slope_niches$snow_rank == 3,])) # not significant
+summary(mblm(slope ~ CLMtemp, repeated = F, data = na.omit(slope_niches[slope_niches$snow_rank == 3,])))
+# not significant
+
 
 slope_niches %>% 
   filter(SnowPersistence == "Low Snow", slope < -0.1)  
