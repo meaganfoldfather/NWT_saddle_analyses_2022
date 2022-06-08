@@ -205,7 +205,6 @@ ggplot(aes(CLMtemp, colonization))+
 
 # Overall low snow sites have had more colonization and extinctions, but not directly related to the thermal niche of the species 
 
-
 # Does this calculation of cover change and slope tell a different story?
 # colonization temp
 fit_cov_temp <- lmer(cover_slope ~ CLMtemp*SnowPersistence + (1|USDA_code), data = rates_CNM)
