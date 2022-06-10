@@ -1,6 +1,6 @@
 # Bring in long-term saddle vegetation data, temperature data, and snowpack data; examine temporal patterns in each
 # M. F. Oldfather
-# 20220310
+# 20220610
 
 #libraries
 library(tidyverse)
@@ -18,6 +18,11 @@ veg_data_original
 
 # change year = 1996 to 1995 for plot 37 (typo in dataset)
 veg_data_original[veg_data_original$year == 1996,"year"] <- 1995
+
+# change CAOC2 to CAOC4 (type as clarified by Hope on 6/9/2022 only showed up in plot 66 in 2020) - will be fixed in dataset
+veg_data_original[veg_data_original$USDA_code == "CAOC2", "USDA_code"] <- "CAOC4" 
+unique(veg_data_original[veg_data_original$USDA_code == "CAOC4", "USDA_name"])
+veg_data_original[veg_data_original$USDA_code == "CAOC4", "USDA_name"] <- "Castilleja occidentalis" 
 
 # keep only bottom and top hits to allow for consistency across time, and limit to 1 hit per x,y - bottom hit if there is only a bottom hit, otherwise, top hit --> "veg_data"
 veg_data <-
@@ -251,7 +256,7 @@ plot2 <- turnover %>%
   geom_hline(yintercept = 0)+
   xlab("Year")+
   ylab("Dispersion Relative to 1990")+
-  scale_colour_viridis_d(option = "turbo")+
+  scale_colour_viridis_d(option = "mako")+
   theme(legend.title=element_blank(), text = element_text(size=18))
 # the snowier sites are getting more homogenous and the less snowy sites are getting more heterogenous
 plot2
