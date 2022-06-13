@@ -1,6 +1,7 @@
 # Taking a stab at  looking at the specific species driving the turnover and thermophilization trends
 
 library(mblm)
+library(cowplot)
 
 #source("scripts/saddle_data_compilation.R")  # use veg_snow
 source("scripts/thermophilization_script.R")
@@ -41,6 +42,7 @@ veg_snow %>%
 plot(density(species_slopes_snow$slope))
 
 # rank 1 - exposed sites --> Kobresia is increasing, as is DECE, but to a much lower extent
+exposed <- 
 species_slopes_snow %>% 
   filter(snow_rank == 1) %>% 
   filter(slope > 0.02 | slope < -0.02) %>% 
@@ -48,19 +50,25 @@ ggplot(aes(USDA_code, slope))+
   geom_point()+
   geom_hline(yintercept = 0)+
   theme_bw()+
+  xlab("species")+
+  ylab("Temporal Change in Abundance")+
   ggtitle("Exposed")
 
 # rank 2 - average sites --> Deschampsia is greatly increasing
-species_slopes_snow %>% 
+average <-
+  species_slopes_snow %>% 
   filter(snow_rank == 2) %>% 
   filter(slope > 0.02 | slope < -0.02) %>% 
 ggplot(aes(USDA_code, slope))+
   geom_point()+
   geom_hline(yintercept = 0)+
   theme_bw()+
+    xlab("species")+
+  ylab("Temporal Change in Abundance")+
   ggtitle("Average")
 
 # rank 3 - snowy sites --> Deschampsia is greatly increasing
+snowy <- 
 species_slopes_snow %>% 
   filter(snow_rank == 3) %>% 
   filter(slope > 0.02 | slope < -0.02) %>% 
@@ -68,7 +76,14 @@ ggplot(aes(USDA_code, slope))+
   geom_point()+
   geom_hline(yintercept = 0)+
   theme_bw()+
+    xlab("species")+
+  ylab("Temporal Change in Abundance")+
   ggtitle("Snowy")
+
+plot_grid(exposed, average, snowy, nrow = 3)
+
+# what is the percent greater change in abundance for K and D?
+
 
 # Plot Kobresia through time
 veg_snow %>% 
