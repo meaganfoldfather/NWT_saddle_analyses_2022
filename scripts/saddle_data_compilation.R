@@ -235,6 +235,7 @@ mumti_change_3
 turnover <- rbind(mumti_change_1, mumti_change_2, mumti_change_3)
 turnover$Snow_Persistence <- factor(turnover$Snow_Persistence, levels = c("Low Snow", "Average Snow", "High Snow"))
 
+colors <- c("gray27", "dodgerblue", "grey65")
 plot1 <- turnover %>% 
   ggplot(aes(year2, composition_change, color = Snow_Persistence)) +
   geom_point(size = 3)+
@@ -242,7 +243,8 @@ plot1 <- turnover %>%
   theme_classic()+
   xlab("Year")+
   ylab("Compositional Change Relative to 1990")+
-      scale_colour_viridis_d(option = "mako")+
+  scale_colour_manual(values = colors)+
+      #scale_colour_viridis_d(option = "mako")+
   theme(legend.title=element_blank(), text = element_text(size=18))
 # the extremes are changing the most - we know from the thermophilization analysis that these extremes are changing in different ways
 plot1
