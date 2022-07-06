@@ -136,17 +136,21 @@ emtrends(fit_LDMC, specs = "Snow_Persistence", var = "year")
 # low snow generally has higher LDMC, increasing, not sig diff slopes between groups
 
 #### W_D13 ####
+colors <- c("black", "dodgerblue", "grey65")
 weighted_traits %>% 
   ggplot(aes(year, W_D13, col = Snow_Persistence))+
   geom_point() +
   #geom_line(aes(group = plot)) +
   theme_classic()+
-  geom_smooth(method = "lm", se = F)+
+  #geom_smooth(method = "lm", se = F)+
+    geom_smooth(data = weighted_traits[weighted_traits$snow_rank != 1,], method = "lm", se = F, lty = "dashed")+
+    geom_smooth(data =weighted_traits[weighted_traits$snow_rank == 1,], method = "lm", se = F, lty = "solid")+
   xlab("Year")+
-  ylab("Community-Weighted Trait (D13)")+
+  ylab("Community-Weighted Water Use Efficiency")+
+  scale_colour_manual(values = colors)+
    facet_wrap(.~Snow_Persistence)+
-      scale_color_viridis_d(option = "mako")+
-   theme(legend.title=element_blank(), text = element_text(size=14))
+      #scale_color_viridis_d(option = "mako")+
+   theme(legend.title=element_blank(), legend.position = "none", text = element_text(size=16))
 
 
 fit_D13 <- lmer(W_D13 ~ year*Snow_Persistence + (1|plot) + (1|year), data = weighted_traits)

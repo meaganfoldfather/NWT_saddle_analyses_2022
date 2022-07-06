@@ -86,6 +86,7 @@ plot_grid(exposed, average, snowy, nrow = 3)
 
 
 # Plot Kobresia through time
+colors <- c("black", "dodgerblue", "grey65")
 veg_snow %>% 
   filter(USDA_code == "KOMY") %>% 
   ggplot(aes(year, hits, color = SnowPersistence)) +
@@ -96,8 +97,9 @@ veg_snow %>%
   ylab("Abundance")+
   facet_wrap(.~ SnowPersistence)+
   ggtitle("Kobresia myosuroides") + 
-     scale_color_viridis_d(option = "mako")+
-   theme(legend.title=element_blank(), text = element_text(size=14))
+  scale_colour_manual(values = colors)+
+     #scale_color_viridis_d(option = "mako")+
+   theme(legend.title=element_blank(), text = element_text(size=14), legend.position = "none")
 # I wonder if the plots that have the highest increased in Kobresia in snow rank 1 are the ones with low ES values? 
 
 
@@ -112,8 +114,9 @@ veg_snow %>%
   ylab("Abundance")+
   facet_wrap(.~ SnowPersistence)+
   ggtitle("Deschampsia cespitosa") + 
-     scale_color_viridis_d(option = "mako")+
-   theme(legend.title=element_blank(), text = element_text(size=14))
+  scale_colour_manual(values = colors)+
+    #scale_color_viridis_d(option = "mako")+
+   theme(legend.title=element_blank(), text = element_text(size=14), legend.position = "none")
 
 # Other canidates: Artemesia scopolurim (ARSC) and Minuartia obtusiloba (MIOB2) from Sarah 
 # Geum is decreasing the less snow sites,  but it's thermal niche is ~0
@@ -137,10 +140,11 @@ slope_niches %>%
     facet_wrap(.~ SnowPersistence)+
   ylab("Temporal Change in Abundance")+
   xlab("Thermal Niche")+
-  geom_smooth(data =slope_niches[slope_niches$snow_rank == 1,], method = "lm", se = T, lty = "solid")+
-    geom_smooth(data =slope_niches[slope_niches$snow_rank == 2:3,], method = "lm", se = T, lty = "dashed")+
-    scale_color_viridis_d(option = "mako")+
-  scale_fill_viridis_d(option = "mako")+
+  geom_smooth(data =slope_niches[slope_niches$snow_rank == 1,], method = "lm", se = F, lty = "solid")+
+    geom_smooth(data =slope_niches[slope_niches$snow_rank %in% 2:3,], method = "lm", se = F, lty = "dashed")+
+  #scale_color_viridis_d(option = "mako")+
+  #scale_fill_viridis_d(option = "mako")+
+  scale_colour_manual(values = colors)+
    theme(legend.title=element_blank(), legend.position = "none", text = element_text(size=18))
 
 # This plot is even more convincing that largely the patterns are driven by the two species discussed above, except maybe in low snow where some warm species are being lost too 
@@ -154,6 +158,10 @@ summary(mblm(slope ~ CLMtemp, repeated = F, data = na.omit(slope_niches[slope_ni
 
 summary(lm(slope ~ CLMtemp, data = slope_niches[slope_niches$snow_rank == 3,])) # not significant
 summary(mblm(slope ~ CLMtemp, repeated = F, data = na.omit(slope_niches[slope_niches$snow_rank == 3,])))
+# not significant
+
+
+summary(mblm(slope ~ CLMtemp*SnowPersistence, repeated = F, data = na.omit(slope_niches)))
 # not significant
 
 
@@ -192,12 +200,18 @@ rates_CNM <-
   left_join(rates, distinct(veg_snow_niche[,c(3,9:13)]))
 rates_CNM
 
+rates_CNM %>% 
+  group_by(SnowPersistence) %>% 
+  summarize(ext = mean(extinction, na.rm = T), col = mean(colonization, na.rm = T))
+
+
 
 # Models 
 # extinction temp
 fit_ext_temp <- glmer(extinction ~ CLMtemp*SnowPersistence + (1|USDA_code) + (1|plot), data = rates_CNM, family = "binomial")
 summary(fit_ext_temp)
 emtrends(fit_ext_temp, specs = "SnowPersistence", var = "CLMtemp")
+emmeans(object = fit_ext_temp, specs = "SnowPersistence")
 
 rates_CNM %>% 
 ggplot(aes(CLMtemp, extinction))+

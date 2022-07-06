@@ -19,13 +19,14 @@ richness
 richness %>% 
   ggplot(aes(year, richness, color = SnowPersistence, fill = SnowPersistence))+
   #geom_point(size = .5)+
-  geom_line(aes(group = plot), color = "gray", alpha = .3)+
+  geom_line(aes(group = plot), color = "lightgray", alpha = .3)+
   geom_smooth(method = "lm", se =F)+
   theme_classic()+
     xlab("Year")+
   ylab("Richness")+
-      scale_colour_viridis_d(option = "mako")+
-    scale_fill_viridis_d(option = "mako")+
+  scale_colour_manual(values = colors)+
+    #scale_colour_viridis_d(option = "mako")+
+    #scale_fill_viridis_d(option = "mako")+
    theme(legend.title=element_blank(), text = element_text(size=18))
 
 # model fit

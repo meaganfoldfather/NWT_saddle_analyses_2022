@@ -41,18 +41,22 @@ veg_snow_niche %>%
             WCMsummertemp = weighted.mean(CLMsummertemp, hits, na.rm = T))
 weighted_clm
 
-colors <- c("gray27", "dodgerblue", "grey65")
+colors <- c("black", "dodgerblue", "grey65")
 plot_thermo <- weighted_clm %>% 
   ggplot(aes(year, WCMtemp, color = Snow_Persistence, fill = Snow_Persistence))+
-  geom_point(size = .5)+
-  geom_smooth(method = "lm", se =F, lwd = 1.5)+
+  geom_point(size = 1)+
+  facet_grid(.~Snow_Persistence)+
+  #geom_smooth(method = "lm", se =F, lwd = 1.5)+
+  geom_smooth(data = weighted_clm[weighted_clm$snow_rank != 2,], method = "lm", se = F, lty = "solid")+
+    geom_smooth(data =weighted_clm[weighted_clm$snow_rank == 2,], method = "lm", se = F, lty = "dashed")+
   theme_classic()+
     xlab("Year")+
   ylab("Community-weighted Climate Niche - Temperature")+
     scale_colour_manual(values = colors)+
     #scale_colour_viridis_d(option = "mako")+
     #scale_fill_viridis_d(option = "mako")+
-   theme(legend.title=element_blank(), text = element_text(size=18))
+   theme(legend.title=element_blank(), legend.position = "none", text = element_text(size=16))
+
 plot_thermo
 #ggsave(filename = "figure/thermophilzation.jpeg", plot_thermo)
 

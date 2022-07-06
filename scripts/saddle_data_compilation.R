@@ -258,7 +258,8 @@ plot2 <- turnover %>%
   geom_hline(yintercept = 0)+
   xlab("Year")+
   ylab("Dispersion Relative to 1990")+
-  scale_colour_viridis_d(option = "mako")+
+  scale_colour_manual(values = colors)+
+  #scale_colour_viridis_d(option = "mako")+
   theme(legend.title=element_blank(), text = element_text(size=18))
 # the snowier sites are getting more homogenous and the less snowy sites are getting more heterogenous
 plot2
