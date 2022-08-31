@@ -17,10 +17,11 @@ richness
 
 
 richness %>% 
-  ggplot(aes(year, richness, color = SnowPersistence, fill = SnowPersistence))+
+  ggplot(aes(year, richness, color = SnowPersistence))+
   #geom_point(size = .5)+
   geom_line(aes(group = plot), color = "lightgray", alpha = .3)+
-  geom_smooth(method = "lm", se =F)+
+  geom_smooth(data = richness[richness$SnowPersistence != "High Snow",], method = "lm", se = F, lty = "dashed")+
+    geom_smooth(data =richness[richness$SnowPersistence == "High Snow",], method = "lm", se = F, lty = "solid")+
   theme_classic()+
     xlab("Year")+
   ylab("Richness")+

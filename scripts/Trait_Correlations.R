@@ -2,6 +2,7 @@
 
 library(tidyverse)
 library(ggcorrplot)
+library(GGally)
 
 # bring in in climate data for the species
 thermal_trait <- read_csv("data/species-climate-niche-means.csv")
@@ -25,7 +26,13 @@ colnames(focal_traits)[1] <- "saddleName"
 all_traits <- left_join(thermal_trait, focal_traits)
 all_traits
 
-ggcorrplot::ggcorrplot(cor(all_traits[,c(4,7:10)], use=  "pairwise.complete.obs" ), type = "lower") 
+cor.mat <- cor(all_traits[,c(4,7:10)], use=  "pairwise.complete.obs")
+p.mat <- cor_pmat(all_traits[,c(4,7:10)])
+
+ggcorrplot::ggcorrplot(cor(all_traits[,c(4,7:10)], use=  "pairwise.complete.obs" ), type = "lower", colors = c("#6D9EC1", "white", "#E46726"), lab = T, p.mat = p.mat) 
+pairs(all_traits[,c(4,7:10)])
+
+ggpairs(all_traits,   columns = c(4,7:10) )+ theme_classic()
 
 all_traits %>% 
   ggplot(aes(CLMtemp, D13C))+

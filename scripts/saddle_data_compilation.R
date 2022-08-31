@@ -1,6 +1,6 @@
 # Bring in long-term saddle vegetation data, temperature data, and snowpack data; examine temporal patterns in each
 # M. F. Oldfather
-# 20220610
+# 20220831
 
 #libraries
 library(tidyverse)
@@ -159,6 +159,10 @@ snow %>%
 
 
 # look at snow depth through time - no directional patterns - supports taking a average over years; there is some evidence of snowier plots becomes less snowy through time... more evident in May than June
+
+fit_snow_all <- lmer(snow_depth ~ year + (1|plot) + (1|year), data = snow_May_plot_means, control = lmerControl(optimizer = "bobyqa")) 
+summary(fit_snow_all)
+
 snow_May_plot_means %>% 
 ggplot(aes(year, snow_depth, group = point_ID)) +
   geom_point()+
@@ -166,10 +170,20 @@ ggplot(aes(year, snow_depth, group = point_ID)) +
   theme_classic()+
   geom_smooth(method = "lm", se=F)
 
+snow_May_plot_means %>% 
+ggplot(aes(year, snow_depth)) +
+  geom_point()+
+  theme_classic()+
+  geom_smooth(method = "lm", se=F, col = "black", lty= "dashed")+
+  xlab("Year")+
+  ylab("Annual Average May Snow Depth")+
+    theme(legend.title=element_blank(), text = element_text(size=18))
+colnames(snow_May_plot_means)[2] <- "plot"
+
 # estimate the snowiness of each plot
 snowiness_by_plot <- 
   snow_May_plot_means %>% 
-    group_by(point_ID) %>% 
+    group_by(plot) %>% 
   summarise(snow_depth = round(mean(snow_depth, na.rm = T),digits = 0))
 snowiness_by_plot
 
@@ -179,6 +193,29 @@ snowiness_by_plot  %>%
 mutate(snow_rank = ntile(snow_depth, 3))
 colnames(snowiness_by_plot)[1] <- "plot" 
 snowiness_by_plot
+
+snow_plotting <- left_join(snow_May_plot_means, snowiness_by_plot[,c(1,3)])
+snow_plotting
+
+snow_plotting$snow_rank <- factor(snow_plotting$snow_rank, levels = c("1", "2", "3"), 
+                  labels = c("Low Snow", "Average Snow", "High Snow"))
+
+colors <- c("gray27", "dodgerblue", "grey65")
+snow_plotting %>% 
+ggplot(aes(year, snow_depth, color = as.factor(snow_rank))) +
+  geom_point(size = .5)+
+  geom_smooth(data = snow_plotting[snow_plotting$snow_rank != "High Snow",], method = "lm", se = F, lty = "dashed")+
+    geom_smooth(data =snow_plotting[snow_plotting$snow_rank == "High Snow",], method = "lm", se = F, lty = "solid")+
+facet_wrap(.~as.factor(snow_rank))+
+  theme_classic()+
+  xlab("Year")+
+  ylab("Annual Average May Snow Depth")+
+  scale_colour_manual(values = colors)+
+  theme(legend.position = "none", text = element_text(size=18))
+
+fit_snow <- lmer(snow_depth ~ year*as.factor(snow_rank) + (1|plot) + (1|year), data = snow_plotting)  
+summary(fit_snow)
+emtrends(fit_snow , specs = "snow_rank", var = "year")
 
 # combine veg and snow data --> veg_snow
 veg_snow <- left_join(subset_veg_abundance_known_species, snowiness_by_plot)
@@ -378,13 +415,20 @@ plot_coords$year<- as.double(plot_coords$year)
 coords_snow <- left_join(plot_coords, snowiness_by_plot)
 coords_snow
 
-coords_snow$snow_rank <- as.factor(coords_snow$snow_rank)
+coords_snow$snow_rank <- factor(coords_snow$snow_rank, levels = c("1", "2", "3"), 
+                  labels = c("Low Snow", "Average Snow", "High Snow"))
 
+colors <- c("black", "dodgerblue", "grey65")
 coords_snow %>% 
   ggplot(aes(year, comp_change, group = snow_rank, color = as.factor(snow_rank)))+
   geom_point()+
   geom_smooth(method = "lm", se = F)+
-  theme_bw()
+  theme_bw()+
+      xlab("Year")+
+  ylab("Compositional Change Relative to 1990")+
+  scale_colour_manual(values = colors)+
+   theme(legend.title=element_blank(), text = element_text(size=18))
+
 
 # model fits - categorical
 fit_categorical <- lmer(comp_change ~ year*snow_rank + (1|plot) + (1|year), data = coords_snow)
