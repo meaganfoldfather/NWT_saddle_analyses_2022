@@ -11,18 +11,22 @@ library(lubridate)
 library(viridisLite)
 library(picante)
 library(plotly)
+library(ggforce)
 
-# bring in veg data (downloaded October 2021)
+# bring in veg data (knb-lter-nwt.93.6) (downloaded Sept 6 2022)
 veg_data_original<- read_csv("data/saddptqd.hh.data.csv")
 veg_data_original
 
-# change year = 1996 to 1995 for plot 37 (typo in dataset)
+# change year = 1996 to 1995 for plot 37 (this plot samples in a different year)
 veg_data_original[veg_data_original$year == 1996,"year"] <- 1995
 
 # change CAOC2 to CAOC4 (type as clarified by Hope on 6/9/2022 only showed up in plot 66 in 2020) - will be fixed in dataset
 veg_data_original[veg_data_original$USDA_code == "CAOC2", "USDA_code"] <- "CAOC4" 
 unique(veg_data_original[veg_data_original$USDA_code == "CAOC4", "USDA_name"])
 veg_data_original[veg_data_original$USDA_code == "CAOC4", "USDA_name"] <- "Castilleja occidentalis" 
+
+# Make all CASCS2 to Carex Scopularum (checking with Hope --> emailed 201220906) to deal with this code also used for Unknown Carex Species 1 and Unknow Carex Species 2 in plot 57 in 2018
+veg_data_original[veg_data_original$USDA_code == "CASCS2", "USDA_name"] <- "Carex scopulorum var. scopulorum" 
 
 # keep only bottom and top hits to allow for consistency across time, and limit to 1 hit per x,y - bottom hit if there is only a bottom hit, otherwise, top hit --> "veg_data"
 veg_data <-
@@ -54,8 +58,7 @@ unknown_species <- c("2FORB","2MOSS","2GRAM", "2UNKSC", "POA","2UNK", "CAREX", "
 veg_abundance_known_species <-
   veg_abundance %>% 
   filter(!(USDA_code %in% non_plant)) %>% 
-  filter(!(USDA_code %in% unknown_species)) %>% 
-  filter(!(USDA_code %in% "CASCS2")) # there is duplicates in this species - need to investigate
+  filter(!(USDA_code %in% unknown_species)) 
 veg_abundance_known_species
 
 #remove plots where there are no hits in that specific year (plots with only rocks)
@@ -65,10 +68,11 @@ veg_abundance_known_species %>%
   mutate(totals = sum(hits)) %>% 
   filter(totals > 0)
 
-# remove 1989
+# remove 1989 & 2021
 subset_veg_abundance_known_species <- 
 subset_veg_abundance_known_species %>% 
-  filter(year != 1989)
+  filter(year != 1989) %>% 
+  filter(year != 2021)
 
 # merge in info about veg classifications to remove SF plots
 # FF=fellfield, DM=dry meadow, MM=moist meadow, ST=shrub tundra, SB=snowbed, WM=wet meadow, SF=snowfence
@@ -160,7 +164,7 @@ snow %>%
 
 # look at snow depth through time - no directional patterns - supports taking a average over years; there is some evidence of snowier plots becomes less snowy through time... more evident in May than June
 
-fit_snow_all <- lmer(snow_depth ~ year + (1|plot) + (1|year), data = snow_May_plot_means, control = lmerControl(optimizer = "bobyqa")) 
+fit_snow_all <- lmer(snow_depth ~ year + (1|point_ID) + (1|year), data = snow_May_plot_means, control = lmerControl(optimizer = "bobyqa")) 
 summary(fit_snow_all)
 
 snow_May_plot_means %>% 
@@ -223,9 +227,9 @@ veg_snow
 
 
 # IS THIS A BETTER WAY TO LOOK AT SNOWINESS? As a treatment - I think this is doing the exact same thing. 
-# mumti_change_all <- 
-#   multivariate_change(df = veg_snow ,time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990, treatment.var = "snow_rank")
-# 
+#  mumti_change_all <- 
+#    multivariate_change(df = veg_snow ,time.var = "year", species.var = "USDA_code",abundance.var = "hits", replicate.var = "plot", reference.time = 1990, treatment.var = "snow_rank")
+# # 
 # mumti_change_all %>% 
 #   ggplot(aes(year2, composition_change, color = as.factor(snow_rank))) +
 #   geom_point(size = 3)+
@@ -301,6 +305,13 @@ plot2 <- turnover %>%
 # the snowier sites are getting more homogenous and the less snowy sites are getting more heterogenous
 plot2
 #ggsave(filename = "figure/dispersion_time.jpeg", plot = plot2)
+
+
+# model fits - categorical
+fit_categorical_cluster <- lm(composition_change ~ year2*Snow_Persistence, data = turnover)
+summary(fit_categorical_cluster)
+emtrends(fit_categorical_cluster, specs = "Snow_Persistence", var = "year2")
+emmeans(fit_categorical_cluster, pairwise ~ Snow_Persistence)
 
 
 # correlate changing composition to GDD, look for interactions with snow rank
@@ -380,45 +391,115 @@ plot3 <- turnover_temp %>%
 plot3
 
 # Try continuous snow metric, and possibly a 3D plot --> the difficulty in doing this is that we need plot-specific compositional change data, which is not provided by the codyn package so will need to be calculated  by self. I did this before in a different script. 
-test <- subset_veg_abundance_known_species  %>% 
+test <- veg_snow  %>% 
   unite(year_plot, year, plot, sep = "_")
 test
 
-test_matrix <- sample2matrix(test[,c(1,3,2)])
+test_H <- test %>% filter(snow_rank ==  3)
+test_A <- test %>% filter(snow_rank ==  2)
+test_L <- test %>% filter(snow_rank ==  1)
+
+test_matrix_H <- sample2matrix(test_H[,c(1,3,2)])
+test_matrix_A <- sample2matrix(test_A[,c(1,3,2)])
+test_matrix_L <- sample2matrix(test_L[,c(1,3,2)])
+test_matrix<- sample2matrix(test[,c(1,3,2)])
+
+test_dis_H <- vegdist(test_matrix_H, method = "bray")
+test_dis_A <- vegdist(test_matrix_A, method = "bray")
+test_dis_L <- vegdist(test_matrix_L, method = "bray")
 test_dis <- vegdist(test_matrix, method = "bray")
 
-# ordinate with PCoA (Bray-Curtis dissimilarity) data for all years, plots in that veg class
+# ordinate with PCoA (Bray-Curtis dissimilarity) data for all years, plots in that veg class; should I be modeling the three snow groups seperatly to better match what codyn is doing?
+test_PCoA_H <- pcoa(test_dis_H)
+test_PCoA_A <- pcoa(test_dis_A)
+test_PCoA_L <- pcoa(test_dis_L)
 test_PCoA <- pcoa(test_dis)
+
+barplot(test_PCoA_H$values$Relative_eig[1:10])
+barplot(test_PCoA_A$values$Relative_eig[1:10])
+barplot(test_PCoA_L$values$Relative_eig[1:10]) # does a better job explaining the variation
 barplot(test_PCoA$values$Relative_eig[1:10])
-biplot.pcoa(test_PCoA)
 
 # record locations of all plots for each year
-plot_coords <- tibble(id = rownames(test_matrix), A1 =  test_PCoA$vectors[,1], A2 =  test_PCoA$vectors[,2])
+plot_coords_H <- tibble(id = rownames(test_matrix_H), A1 =  test_PCoA_H$vectors[,1], A2 =  test_PCoA_H$vectors[,2], snow_rank = 3)
+plot_coords_A <- tibble(id = rownames(test_matrix_A), A1 =  test_PCoA_A$vectors[,1], A2 =  test_PCoA_A$vectors[,2], snow_rank = 2)
+plot_coords_L <- tibble(id = rownames(test_matrix_L), A1 =  test_PCoA_L$vectors[,1], A2 =  test_PCoA_L$vectors[,2], snow_rank = 1)
+plot_coords_ordinated_together <- tibble( year_plot = rownames(test_matrix), A1 =  test_PCoA$vectors[,1], A2 =  test_PCoA$vectors[,2])
+
+plot_coords <- rbind(plot_coords_A, plot_coords_H, plot_coords_L)
+
+plot_coords_ordinated_together <- left_join(plot_coords_ordinated_together, test[, c(1,7)])
+
 
 plot_coords <-
   plot_coords %>% 
   separate(id, into = c("year", "plot"))
 plot_coords
 
+plot_coords_ordinated_together <-
+  plot_coords_ordinated_together %>% 
+  separate(year_plot, into = c("year", "plot"))
+plot_coords_ordinated_together
+
+# Make a Ordination plot when all snow ranks ordinated together
+plot_coords_ordinated_together$snow_rank <- factor(plot_coords_ordinated_together$snow_rank, levels = c("1", "2", "3"), 
+                  labels = c("Low Snow", "Average Snow", "High Snow"))
+colors <- c("black", "dodgerblue", "grey65")
+
+centroids<-
+  plot_coords_ordinated_together %>% 
+  group_by(snow_rank, year) %>% 
+  summarise(A1_cent = mean(A1), A2_cent = mean(A2))
+centroids  
+  
+plot_coords_ordinated_together %>% 
+  filter(year %in% c(1990,2010, 2020))%>% 
+  ggplot(aes(A1, A2, color = snow_rank))+
+  geom_point()+
+  geom_point(data = centroids[centroids$year %in% c(1990,2010, 2020),], aes(A1_cent, A2_cent, color = snow_rank), pch = 23, size = 5)+
+  theme_classic()+
+  facet_grid(year~.)+
+  scale_colour_manual(values = colors)+
+      geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+    geom_hline(yintercept = c(0), color = "grey70", linetype = 2) +
+     theme(legend.title=element_blank(), text = element_text(size=18))+
+  coord_equal()+
+  ylab("Axis 1")+
+  xlab("Axis 2")
+
+
 # to calculate compositional change, get absolute change between each plot in 1990 and the rest of the years in A1
 only_the_base <- plot_coords %>% 
   filter(year == 1990)
-colnames(only_the_base) <- c("year_base", "plot", "A1_base", "A2_base")
+colnames(only_the_base) <- c("year_base", "plot", "A1_base", "A2_base", "snow_rank")
 
 plot_coords <- left_join(plot_coords, only_the_base)
-plot_coords$comp_change <- abs(plot_coords$A1-plot_coords$A1_base)
+#plot_coords$comp_change <- abs(plot_coords$A1-plot_coords$A1_base)
+# use trig to look at comp_change in 2 dimensions
+plot_coords$comp_change <- sqrt((plot_coords$A1-plot_coords$A1_base)^2 + (plot_coords$A2-plot_coords$A2_base)^2)
 plot_coords
 
 # bring in snow plot means
 plot_coords$plot <- as.double(plot_coords$plot)
 plot_coords$year<- as.double(plot_coords$year)
-coords_snow <- left_join(plot_coords, snowiness_by_plot)
-coords_snow
+coords_snow <- plot_coords
 
 coords_snow$snow_rank <- factor(coords_snow$snow_rank, levels = c("1", "2", "3"), 
                   labels = c("Low Snow", "Average Snow", "High Snow"))
 
+#Make a PCA plot
 colors <- c("black", "dodgerblue", "grey65")
+coords_snow %>% 
+  filter(year %in% c(1990,2010, 2020))%>% 
+  ggplot(aes(A1, A2, color = snow_rank))+
+  geom_point()+
+  theme_classic()+
+  facet_grid(.~ year)+
+  scale_colour_manual(values = colors)+
+      geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+    geom_hline(yintercept = c(0), color = "grey70", linetype = 2) 
+
+
 coords_snow %>% 
   ggplot(aes(year, comp_change, group = snow_rank, color = as.factor(snow_rank)))+
   geom_point()+
@@ -437,7 +518,6 @@ emtrends(fit_categorical , specs = "snow_rank", var = "year")
 emmeans(fit_categorical, pairwise ~ snow_rank)
 # low snow has higher mean than average, overlaps with high snow
 # high and low snow are overlapping, as are high and average
-
 
 
 # model fits - continuous
@@ -492,3 +572,4 @@ summary(fit_GDD)
 
 anova(fit_GDD_quad_int,fit_GDD_quad)
 anova(fit_GDD,fit_GDD_quad)
+
