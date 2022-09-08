@@ -194,9 +194,26 @@ snowiness_by_plot
 # put plots in to quantiles by snow  1 = low,, 3 = high snow
 snowiness_by_plot <-
 snowiness_by_plot  %>% 
-mutate(snow_rank = ntile(snow_depth, 3))
+mutate(snow_rank = ntile(snow_depth, 4))
 colnames(snowiness_by_plot)[1] <- "plot" 
 snowiness_by_plot
+
+snowiness_by_plot %>% 
+  group_by(snow_rank) %>% 
+  count()
+
+snowiness_by_plot %>% 
+ggplot(aes(snow_depth))+
+  geom_density()
+
+snowiness_by_plot %>% 
+ggplot(aes(snow_depth, col = as.factor(snow_rank)))+
+  geom_density()
+
+snowiness_by_plot %>% 
+  group_by(snow_rank) %>% 
+  summarise(max = max(snow_depth), min = min (snow_depth), diff = max - min)
+
 
 snow_plotting <- left_join(snow_May_plot_means, snowiness_by_plot[,c(1,3)])
 snow_plotting
